@@ -1,6 +1,5 @@
 package es.upm.fi.dia.oeg.morph.base.querytranslator.engine
 
-import com.hp.hpl.jena.graph.query.Rewrite
 import org.apache.log4j.Logger
 import com.hp.hpl.jena.graph.Node
 import scala.collection.JavaConversions._
@@ -14,6 +13,7 @@ import com.hp.hpl.jena.sparql.algebra.op.OpUnion
 import com.hp.hpl.jena.sparql.algebra.op.OpFilter
 import com.hp.hpl.jena.sparql.algebra.optimize.TransformFilterConjunction
 import com.hp.hpl.jena.sparql.algebra.optimize.Optimize
+import com.hp.hpl.jena.sparql.algebra.optimize.Rewrite
 import com.hp.hpl.jena.sparql.algebra.op.OpProject
 import com.hp.hpl.jena.sparql.algebra.op.OpSlice
 import com.hp.hpl.jena.sparql.algebra.op.OpDistinct
