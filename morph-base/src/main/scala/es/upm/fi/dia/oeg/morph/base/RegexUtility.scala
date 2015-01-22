@@ -23,63 +23,32 @@ object RegexUtility {
 	
 	def getTemplateMatching(inputTemplateString: String, inputURIString : String) 
 	: Map[String, String] = {
-	  var newTemplateString = inputTemplateString;
-	  if (!newTemplateString.startsWith("<")) {
-	    newTemplateString = "<" + newTemplateString;
-	  }
-	  if(!newTemplateString.endsWith(">")) {
-	    newTemplateString = newTemplateString + ">";
-	  }
+		val newTemplatePrefix = if (inputTemplateString.startsWith("<")) "" else "<"
+		val newTemplateSuffix = if (inputTemplateString.startsWith(">")) "" else ">"
+		val newTemplateString = newTemplatePrefix + inputTemplateString + newTemplateSuffix
+
+		val newURIPrefix = if (inputURIString.startsWith("<")) "" else "<"
+		val newURISuffix = if (inputURIString.startsWith(">")) "" else ">"
+		val newURIString = newURIPrefix + inputURIString + newURISuffix
 	  
-	  var newURIString = inputURIString;
-	  if(!newURIString.startsWith("<")) {
-	    newURIString = "<" + newURIString;
-	  }
-	  if(!newURIString.endsWith(">")) {
-	    newURIString = newURIString + ">";
-	  }
-	  
-		//val result:Map[String, String] = Map.empty;
 		val columnsFromTemplate = this.getTemplateColumns(newTemplateString, false);
 		//println("columnsFromTemplate = " + columnsFromTemplate);
 		
-		var columnsList = List[String]();
-		var templateString1 = newTemplateString; 
-		for(column <- columnsFromTemplate) {
-			val column2 = column.substring(1, column.length() - 1);
-			columnsList = column2 :: columnsList; 
-			templateString1 = templateString1.replaceAll("\\{" + column2 + "\\}", "(.+?)");
-		}
-		columnsList = columnsList.reverse;
-		//println("columnsList = " + columnsList);
-
+		val columnsList = columnsFromTemplate.map(_.drop(1).dropRight(1))
+		val templateString = columnsFromTemplate.foldLeft(newTemplateString)(
+			(curTemplate, column) => curTemplate.replaceAll("\\{" + column + "\\}", "(.+?)"))
 				
-		val TemplatePattern = templateString1.r;
-		val pattern = new Regex(templateString1);
+		val pattern = new Regex(templateString)
 		val firstMatch = pattern.findFirstMatchIn(newURIString);
 		
-		val result : Map[String, String]= if(firstMatch != None) {
-			val subgroups = firstMatch.get.subgroups;
-			var i = 0;
-			columnsList.map(column  => {
-			  val resultAux = (column -> subgroups(i));
-			  i = i+1;
-			  resultAux
-			}).toMap
-		} else {
-		  Map.empty
-		}
-		
-		result;
+		firstMatch.map(matched => columnsList.zipWithIndex.map({
+			case (column, i) => column -> matched.subgroups(i)
+		}).toMap).getOrElse(Map.empty)
 	}
 	
 	def getTemplateColumns(templateString0 : String, cleanColumn : Boolean) : java.util.List[String] = {
 		val columnsFromTemplate = TemplatePattern1.findAllIn(templateString0).toList;
-		val result = { if(cleanColumn) {
-		  for(templateColumn <- columnsFromTemplate) 
-		    yield templateColumn.substring(1, templateColumn.length() - 1)
-		} else {columnsFromTemplate} }
-		result;
+		if(cleanColumn) columnsFromTemplate.map(_.drop(1).dropRight(1)) else columnsFromTemplate
 	}
 	
 	def replaceTokens(matcher:Matcher, text: String, replacements:java.util.Map[String, Object] ) 

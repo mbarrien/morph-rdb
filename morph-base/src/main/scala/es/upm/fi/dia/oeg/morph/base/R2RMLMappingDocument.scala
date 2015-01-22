@@ -10,206 +10,96 @@ import org.apache.log4j.Logger
 
 class R2RMLMappingDocument(mappingFile : String) {
 	val logger = Logger.getLogger("R2RMLMappingDocument");
-	
-//	object MorphTermMapType extends Enumeration {
-//		type MorphTermMapType = Value
-//				val ConstantTermMap, ColumnTermMap, TemplateTermMap, InvalidTermMapType = Value
-//	}
 
-	
-
-
-	
 	val XSDIntegerURI = XSDDatatype.XSDinteger.getURI();
 	val XSDDoubleURI = XSDDatatype.XSDdouble.getURI();
 	val XSDDateTimeURI = XSDDatatype.XSDdateTime.getURI();
-	var datatypesMap:Map[String, String] = Map();
-	datatypesMap += ("INT" -> XSDIntegerURI);
-	datatypesMap += ("DOUBLE" -> XSDDoubleURI);
-	datatypesMap += ("DATETIME" -> XSDDateTimeURI);
+	// val datatypesMap:Map[String, String] = Map("INT" -> XSDIntegerURI,
+	// 										   "DOUBLE" -> XSDDoubleURI);
+	// 										   "DATETIME" -> XSDDateTimeURI)
 	
 	val model = ModelFactory.createDefaultModel();
 	val in = FileManager.get().open( mappingFile );
 	model.read(in, null, "TURTLE");
 
-	def getTriplesMapResourcesByRRClass(classURI : String) = {
-		var result : List[Resource] = Nil;
-	  
-		val triplesMapResources = model.listSubjectsWithProperty(Constants.R2RML_SUBJECTMAP_PROPERTY);
-		if(triplesMapResources != null) {
-			val triplesMapsList = triplesMapResources.toList();
-			for(triplesMapResource <- triplesMapsList) yield {
-			  val subjectMapResource = triplesMapResource.getPropertyResourceValue(Constants.R2RML_SUBJECTMAP_PROPERTY);
-			  if(subjectMapResource != null) {
-				  val rrClassResource = subjectMapResource.getPropertyResourceValue(Constants.R2RML_CLASS_PROPERTY);
-				  if(rrClassResource != null) {
-					  val subjectMapClassURI = rrClassResource.getURI(); 
-					  if(classURI.equals(subjectMapClassURI)) {
-						  result = result :::result ::: List(triplesMapResource);
-					  }				    
-				  }
-			  }
-			}		  
-		}
+	def getTriplesMapResourcesByRRClass(classURI : String) =
+		model.listSubjectsWithProperty(Constants.R2RML_SUBJECTMAP_PROPERTY).toList().filter(triplesMapResource => {
+			val subjectMapResource = triplesMapResource.getPropertyResourceValue(Constants.R2RML_SUBJECTMAP_PROPERTY)
+			subjectMapResource != null && {
+				val rrClassResource = subjectMapResource.getPropertyResourceValue(Constants.R2RML_CLASS_PROPERTY)
+				rrClassResource != null && rrClassResource.getURI.equals(classURI)
+			}
+		})
 
-		result;
-	}
-
-	def getPredicateObjectMapResources(triplesMapResources : List[Resource]) : List[Resource] = {
-		val result = {
-			if(triplesMapResources.isEmpty) {
-			  Nil;;
-			} else {
-				val resultHead =  this.getPredicateObjectMapResources(triplesMapResources.head);
-				val resultTail = this.getPredicateObjectMapResources(triplesMapResources.tail);
-				resultHead :::resultHead ::: resultTail;
-			}		  
-		}
-		result;
-	}
+	def getPredicateObjectMapResources(triplesMapResources : List[Resource]) : List[Resource] =
+		triplesMapResources.flatMap(this.getPredicateObjectMapResources(_))
 
 		
-	def getPredicateObjectMapResources(triplesMapResource : Resource) : List[Resource]= {
-		val predicateObjectMapStatementsIterator = triplesMapResource.listProperties(Constants.R2RML_PREDICATEOBJECTMAP_PROPERTY);
-		val predicateObjectMapStatements = predicateObjectMapStatementsIterator.toList().toList;
-		for(predicateObjectMapResource <- predicateObjectMapStatements) {
-		  val predicateObjectMapResourceObject = predicateObjectMapResource.getObject();
-		  val predicateObjectMapResourceObjectResource = predicateObjectMapResourceObject.asResource();
-		}
-		
-		val result = for {predicateObjectMapStatement <- predicateObjectMapStatements} 
-			yield predicateObjectMapStatement.getObject().asResource();
-		result;
-	}
+	def getPredicateObjectMapResources(triplesMapResource : Resource) : List[Resource] =
+		triplesMapResource.listProperties(Constants.R2RML_PREDICATEOBJECTMAP_PROPERTY).map(
+			_.getObject.asResource).toList
 	
-	def getRRLogicalTable(triplesMapResource : Resource) = {
-	  val rrLogicalTableResource = triplesMapResource.getPropertyResourceValue(Constants.R2RML_LOGICALTABLE_PROPERTY);
-	  rrLogicalTableResource;
-	}
+	def getRRLogicalTable(triplesMapResource : Resource) =
+		triplesMapResource.getPropertyResourceValue(Constants.R2RML_LOGICALTABLE_PROPERTY)
 
-	def getRRSubjectMapResource(triplesMapResource : Resource) = {
-		val rrSubjectMapResource = triplesMapResource.getPropertyResourceValue(Constants.R2RML_SUBJECTMAP_PROPERTY);
-		rrSubjectMapResource;
-	}
+	def getRRSubjectMapResource(triplesMapResource : Resource) =
+		triplesMapResource.getPropertyResourceValue(Constants.R2RML_SUBJECTMAP_PROPERTY)
 
 	def getRRLogicalTableTableName(triplesMapResource : Resource) = {
 		val rrLogicalTableResource = this.getRRLogicalTable(triplesMapResource);
 		val rrTableNameResource = rrLogicalTableResource.getPropertyResourceValue(Constants.R2RML_TABLENAME_PROPERTY);
-		val result = {
-			if( rrTableNameResource != null) {
-				val tableName = rrTableNameResource.asLiteral().getValue().toString();
-				tableName;
-			} else {
-				null;
-			}		  
-		}
-		result;
+		if( rrTableNameResource != null) rrTableNameResource.asLiteral.getValue.toString else null
 	}
 	
 	def getObjectMapResource(predicateObjectMapResource : Resource) = {
 	  val objectMapResource = predicateObjectMapResource.getPropertyResourceValue(Constants.R2RML_OBJECTMAP_PROPERTY);
 	  val parentTriplesMap = objectMapResource.getPropertyResourceValue(Constants.R2RML_PARENTTRIPLESMAP_PROPERTY);
-	  val result : Resource = {
-		  if(parentTriplesMap == null) {
-			  objectMapResource
-		  } else {
-			  null;
-		  }
-	  }
-	  
-	  result;
+	  if(parentTriplesMap == null) objectMapResource else null
 	}
 
 	def getRefObjectMapResource(predicateObjectMapResource : Resource) = {
 	  val objectMapResource = predicateObjectMapResource.getPropertyResourceValue(Constants.R2RML_OBJECTMAP_PROPERTY);
 	  val parentTriplesMap = objectMapResource.getPropertyResourceValue(Constants.R2RML_PARENTTRIPLESMAP_PROPERTY);
-	  val result : Resource = {
-		  if(parentTriplesMap != null) {
-			  objectMapResource
-		  } else {
-			  null;
-		  }
-	  }
-	  
-	  result;
+	  if(parentTriplesMap != null) objectMapResource else null
 	}
 		
-	def getParentTriplesMapResource(objectMapResource : Resource) = {
-	  val parentTriplesMapResource = objectMapResource.getPropertyResourceValue(Constants.R2RML_PARENTTRIPLESMAP_PROPERTY);
-	  parentTriplesMapResource;
-	}
+	def getParentTriplesMapResource(objectMapResource : Resource) =
+		objectMapResource.getPropertyResourceValue(Constants.R2RML_PARENTTRIPLESMAP_PROPERTY)
 	
-	def getParentTriplesMapLogicalTableResource(objectMapResource : Resource) = {
-	  val parentTriplesMapResource = this.getParentTriplesMapResource(objectMapResource);
-	  val parentTriplesMapLogicalTableResource = this.getRRLogicalTable(Constants.R2RML_LOGICALTABLE_PROPERTY); 
-	  parentTriplesMapLogicalTableResource
-	}
+	def getParentTriplesMapLogicalTableResource(objectMapResource : Resource) =
+		// this.getParentTriplesMapResource(objectMapResource)
+		this.getRRLogicalTable(Constants.R2RML_LOGICALTABLE_PROPERTY)
 
-	def getTermTypeResource(termMapResource : Resource) = {
-	  val termTypeResource = termMapResource.getPropertyResourceValue(Constants.R2RML_TERMTYPE_PROPERTY);
-	  termTypeResource;
-	}
+	def getTermTypeResource(termMapResource : Resource) =
+		termMapResource.getPropertyResourceValue(Constants.R2RML_TERMTYPE_PROPERTY)
 
-	def getRRColumnResource(termMapResource : Resource) = {
-	  val rrColumnResource = termMapResource.getProperty(Constants.R2RML_COLUMN_PROPERTY);
-	  rrColumnResource;
-	}
+	def getRRColumnResource(termMapResource : Resource) =
+		termMapResource.getProperty(Constants.R2RML_COLUMN_PROPERTY)
 
-	def getRRTemplateResource(termMapResource : Resource) = {
-	  val rrTemplateResource = termMapResource.getProperty(Constants.R2RML_TEMPLATE_PROPERTY);
-	  rrTemplateResource.getObject();
-	}
+	def getRRTemplateResource(termMapResource : Resource) =
+		termMapResource.getProperty(Constants.R2RML_TEMPLATE_PROPERTY).getObject()
 
-	
-	def getDatatypeResource(termMapResource : Resource) = {
-	  val datatypeResource = termMapResource.getPropertyResourceValue(Constants.R2RML_DATATYPE_PROPERTY);
-	  datatypeResource;
-	}
-
+	def getDatatypeResource(termMapResource : Resource) =
+		termMapResource.getPropertyResourceValue(Constants.R2RML_DATATYPE_PROPERTY)
 	
 	
 	def getTermMapType(termMapResource : Resource) = {
 		if(termMapResource == null) {
 			logger.debug("termMapResource is null");
 		}
-		
-		val props = termMapResource.listProperties().toList();
-
-		val termMapType = {
-			val constantResource = termMapResource.getProperty(Constants.R2RML_CONSTANT_PROPERTY);
-			if(constantResource != null) {
-				Constants.MorphTermMapType.ConstantTermMap;
-			} else {
-				val columnResource = termMapResource.getProperty(Constants.R2RML_COLUMN_PROPERTY);
-				if(columnResource != null) {
-					Constants.MorphTermMapType.ColumnTermMap;
-				} else {
-					val templateResource = termMapResource.getProperty(Constants.R2RML_TEMPLATE_PROPERTY);
-					if(templateResource != null) {
-						Constants.MorphTermMapType.TemplateTermMap;
-					} else {
-						Constants.MorphTermMapType.InvalidTermMapType;
-					}
-				}
-			}
-		}
-		termMapType;
+		val termMapTypes = List(Constants.R2RML_CONSTANT_PROPERTY -> Constants.MorphTermMapType.ConstantTermMap, 
+								Constants.R2RML_COLUMN_PROPERTY -> Constants.MorphTermMapType.ColumnTermMap,
+								Constants.R2RML_TEMPLATE_PROPERTY -> Constants.MorphTermMapType.TemplateTermMap)
+		termMapTypes.find({
+			case (propertyType, result) => termMapResource.getProperty(propertyType) != null
+		}).map(_._2).getOrElse(Constants.MorphTermMapType.InvalidTermMapType)
 	}
 	
-	def getTemplateValues(termMapResource : Resource, uri : String ) : Map[String, String] = {
-		val termMapValueType = this.getTermMapType(termMapResource);
-
-		val result : Map[String, String] = {
-			if(termMapValueType == Constants.MorphTermMapType.TemplateTermMap) {
-				val templateString = this.getRRTemplateResource(termMapResource).asLiteral().getValue().toString();
-				val matchedTemplate = RegexUtility.getTemplateMatching(templateString, uri);
-				matchedTemplate.toMap;
-			} else {
-			  Map();
-			}
+	def getTemplateValues(termMapResource : Resource, uri : String ) : Map[String, String] =
+		if(this.getTermMapType(termMapResource) == Constants.MorphTermMapType.TemplateTermMap) {
+			val templateString = this.getRRTemplateResource(termMapResource).asLiteral().getValue().toString()
+			RegexUtility.getTemplateMatching(templateString, uri).toMap
+		} else {
+			Map.empty
 		}
-
-		result;
-	}	
-	
 }

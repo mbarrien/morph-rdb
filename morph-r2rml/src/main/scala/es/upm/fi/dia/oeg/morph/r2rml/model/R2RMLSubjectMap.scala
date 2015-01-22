@@ -14,7 +14,7 @@ extends R2RMLTermMap(termMapType, termType, datatype, languageTag) {
 	override val logger = Logger.getLogger(this.getClass().getName());
 	
 	val inferredTermType = this.inferTermType;
-	if(inferredTermType != null && inferredTermType.equals(Constants.R2RML_LITERAL_URI)) {
+	if (inferredTermType.equals(Constants.R2RML_LITERAL_URI)) {
 		throw new Exception("Literal is not permitted in the subject map!");
 	}
 		
@@ -34,20 +34,14 @@ object R2RMLSubjectMap {
 		val classURIs:Set[String] = rdfNode match {
 		  case resourceNode:Resource => {
 			  val classStatements = resourceNode.listProperties(Constants.R2RML_CLASS_PROPERTY);
-			  val classURIsAux : Set[String]= if(classStatements != null) {
-				  classStatements.map(classStatement => {
-				    classStatement.getObject().toString();}).toSet;
-			  } else {
-				  Set.empty;
-			  }
-			  classURIsAux
+			  classStatements.map(_.getObject().toString()).toSet
 		  }
-		  case _ => { Set.empty }
+		  case _ => Set.empty
 		}
 		
 		val graphMaps:Set[R2RMLGraphMap] = rdfNode match {
-		  case resourceNode:Resource => { R2RMLGraphMap.extractGraphMaps(resourceNode); }
-		  case _ => {Set.empty}
+		  case resourceNode:Resource => R2RMLGraphMap.extractGraphMaps(resourceNode)
+		  case _ => Set.empty
 		}
 
 		val sm = new R2RMLSubjectMap(termMapType, termType, datatype
@@ -60,10 +54,6 @@ object R2RMLSubjectMap {
 	}
 	
 
-	def extractSubjectMaps(resource:Resource) : Set[R2RMLSubjectMap]= {
-	  val tms = R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.sub);
-	  val result = tms.map(tm => tm.asInstanceOf[R2RMLSubjectMap]);
-	  result;
-	}
-
+	def extractSubjectMaps(resource:Resource) : Set[R2RMLSubjectMap] =
+	  R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.sub).map(_.asInstanceOf[R2RMLSubjectMap])
 }

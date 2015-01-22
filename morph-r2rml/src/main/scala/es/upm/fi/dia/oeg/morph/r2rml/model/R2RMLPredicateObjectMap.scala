@@ -38,23 +38,10 @@ class R2RMLPredicateObjectMap(val predicateMaps:List[R2RMLPredicateMap]
 //	  }
 //	}
 	
-	def getMappedPredicateName(index:Int ) : String = {
-		val result = if(this.predicateMaps != null && !this.predicateMaps.isEmpty()) {
-			this.predicateMaps.get(index).getOriginalValue();
-		} else {
-			 null;
-		}
-		result;
-	}
+	def getMappedPredicateName(index:Int ) : String =
+		this.predicateMaps.lift(index).map(_.getOriginalValue).orNull
 
-	def getObjectMap(index:Int) : R2RMLObjectMap = {
-		val result = if(this.objectMaps != null && !this.objectMaps.isEmpty()) {
-			this.objectMaps.get(index);
-		} else {
-			null;
-		}
-		result;
-	}
+	def getObjectMap(index:Int) : R2RMLObjectMap = this.objectMaps.lift(index).orNull
 
 //	def getObjectMapType(index:Int) : R2RMLPredicateObjectMap.ObjectMapType.Value  = {
 //		val result = if(this.objectMapTypes != null && !this.objectMapTypes.isEmpty()) {
@@ -65,14 +52,7 @@ class R2RMLPredicateObjectMap(val predicateMaps:List[R2RMLPredicateMap]
 //		result;
 //	}
 
-	def getPredicateMap(index:Int ) : R2RMLPredicateMap  = {
-		val result = if(this.predicateMaps != null && !this.predicateMaps.isEmpty()) {
-			predicateMaps.get(index);
-		} else {
-			null;
-		}
-		result;
-	}
+	def getPredicateMap(index:Int ) : R2RMLPredicateMap = this.predicateMaps.lift(index).orNull
 
 	def getPropertyMappingID() : String  = {
 		// TODO Auto-generated method stub
@@ -97,24 +77,10 @@ class R2RMLPredicateObjectMap(val predicateMaps:List[R2RMLPredicateMap]
 //		result;
 //	}
 
-	def getRangeClassMapping(index:Int ) : String = {
-		val result = if(this.refObjectMaps != null && !this.refObjectMaps.isEmpty() 
-				&& this.refObjectMaps.get(index) != null) {
-			this.refObjectMaps.get(index).getParentTripleMapName();
-		} else {
-			null;
-		}
-		result;
-	}
+	def getRangeClassMapping(index:Int ) : String =
+		this.refObjectMaps.lift(index).map(_.getParentTripleMapName).orNull
 
-	def getRefObjectMap(index:Int ) : R2RMLRefObjectMap = {
-		val result=	if(this.refObjectMaps != null && !this.refObjectMaps.isEmpty()) {
-			this.refObjectMaps.get(index);
-		} else {
-			null;
-		}
-		result;
-	}
+	def getRefObjectMap(index:Int ) : R2RMLRefObjectMap = this.refObjectMaps.lift(index).orNull
 
 	def getRelationName() : String = {
 		// TODO Auto-generated method stub
@@ -122,27 +88,15 @@ class R2RMLPredicateObjectMap(val predicateMaps:List[R2RMLPredicateMap]
 		null;
 	}
 
-	override def toString() : String = {
-		val result = "R2RMLPredicateObjectMap [predicateMaps=" + predicateMaps + ", objectMaps=" + objectMaps + ", refObjectMaps=" + refObjectMaps + "]";
-		result;
-	}
+	override def toString() : String =
+		"R2RMLPredicateObjectMap [predicateMaps=" + predicateMaps + ", objectMaps=" + objectMaps + ", refObjectMaps=" + refObjectMaps + "]";
 
-	def getAlias() : String = {
-		alias;
-	}
+	def getAlias() : String = alias
 
-	def setAlias(alias:String ) = {
-		this.alias = alias;
-	}
+	def setAlias(alias:String ) = { this.alias = alias }
 
-
-	override def getMappedPredicateNames() : Iterable[String] = {
-		val result = this.predicateMaps.map(pm => {
-			pm.getOriginalValue();
-		});
-		
-		result;
-	}
+	override def getMappedPredicateNames() : Iterable[String] =
+		this.predicateMaps.map(_.getOriginalValue)
   
 	def getAttributeName() : String = {
 		// TODO Auto-generated method stub
@@ -157,14 +111,7 @@ object R2RMLPredicateObjectMap {
 		val ObjectMap, RefObjectMap = Value
 	}
   	
-
-
-	
-
-
-	
 	def apply(resource:Resource) : R2RMLPredicateObjectMap = {
-		
 		val predicateMaps = R2RMLPredicateMap.extractPredicateMaps(resource).toList;
 		//val tupleObjectMaps = R2RMLPredicateObjectMap.extractObjectMaps(resource);
 		//val refObjectMaps = tupleObjectMaps.map(x => x._3);
@@ -179,26 +126,12 @@ object R2RMLPredicateObjectMap {
 //			null;
 //		}
 		
-		
-		val pom = new R2RMLPredicateObjectMap(predicateMaps, objectMaps, refObjectMaps
-		    , graphMaps);
-		pom;
+		new R2RMLPredicateObjectMap(predicateMaps, objectMaps, refObjectMaps, graphMaps)
 	}
 
 	def extractPredicateObjectMaps(resource:Resource) : Set[R2RMLPredicateObjectMap] = {
-		val predicateObjectMapStatements = resource.listProperties(
-		    Constants.R2RML_PREDICATEOBJECTMAP_PROPERTY);	  
-		val predicateObjectMaps = if(predicateObjectMapStatements != null) {
-			predicateObjectMapStatements.toList().map(predicateObjectMapStatement => {
-				val predicateObjectMapStatementObjectResource =  
-				  predicateObjectMapStatement.getObject().asInstanceOf[Resource];
-				val predicateObjectMap = R2RMLPredicateObjectMap(predicateObjectMapStatementObjectResource); 
-				predicateObjectMap;			  
-			});
-		} else {
-		  Set.empty;
-		}
-		predicateObjectMaps.toSet;
+		resource.listProperties(Constants.R2RML_PREDICATEOBJECTMAP_PROPERTY).map(statement =>
+			R2RMLPredicateObjectMap(statement.getObject.asResource)
+		).toSet
 	}	
-
 }

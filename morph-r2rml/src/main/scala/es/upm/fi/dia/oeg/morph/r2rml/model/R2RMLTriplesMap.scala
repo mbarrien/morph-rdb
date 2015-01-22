@@ -31,40 +31,28 @@ extends MorphBaseClassMapping(predicateObjectMaps) with MorphR2RMLElement with I
 //	  this.predicateObjectMaps.foreach(pom => pom.buildMetadata(dbMetadata));
 	}
 	
-	def accept(visitor:MorphR2RMLElementVisitor ) : Object ={ return visitor.visit(this); }
+	def accept(visitor:MorphR2RMLElementVisitor ) : Object = visitor.visit(this)
 	
-	override def toString() : String = { return this.name }
+	override def toString() : String = this.name
 	
 	override def getConceptName() :String = {
-		var result : String = null;
-		
 		val classURIs = this.subjectMap.classURIs;
-		if(classURIs == null || classURIs.size() == 0) {
+		if (classURIs.isEmpty) {
 			logger.warn("No class URI defined for TriplesMap: " + this);
+			null
 		} else {
-			if(classURIs.size() > 1) {
+			if(classURIs.size > 1) {
 				logger.warn("Multiple classURIs defined, only one is returned!");
 			}
-			result = classURIs.iterator().next();
+			classURIs.head
 		}
-
-		return result;
 	}	
+
+	override def getPropertyMappings(propertyURI:String ) : Iterable[MorphBasePropertyMapping] =
+		this.predicateObjectMaps.filter(_.getMappedPredicateName(0).equals(propertyURI))
 	
-	override def getPropertyMappings(propertyURI:String ) 
-	: Iterable[MorphBasePropertyMapping] = {
-		val poms= this.predicateObjectMaps;
-		val result = poms.filter(pom => {
-				val predicateMapValue = pom.getPredicateMap(0).getOriginalValue();
-				predicateMapValue.equals(propertyURI)
-			})
-		
-		result;
-	}
-	
-	override def getPropertyMappings() : Iterable[MorphBasePropertyMapping] = {
-	  this.predicateObjectMaps
-	}
+	override def getPropertyMappings() : Iterable[MorphBasePropertyMapping] =
+		this.predicateObjectMaps
 	
 //	override def getRelationMappings() : java.util.Collection[IRelationMapping] = {
 //		val result = if(this.predicateObjectMaps != null) {
@@ -83,47 +71,30 @@ extends MorphBaseClassMapping(predicateObjectMaps) with MorphR2RMLElement with I
 //	}
 	
 	override def isPossibleInstance(uri:String ) : Boolean = {
-		var result = false;
-		
-		val subjectMapTermMapType = this.subjectMap.termMapType;
-		if(subjectMapTermMapType == Constants.MorphTermMapType.TemplateTermMap) {
-			val templateValues = this.subjectMap.getTemplateValues(uri);
-			if(templateValues != null && templateValues.size() > 0) {
-				result = true;
-				for(value <- templateValues.values()) {
-					if(value.contains("/")) {
-						result = false;
-					}
-				}
-			}
+		if(this.subjectMap.termMapType == Constants.MorphTermMapType.TemplateTermMap) {
+			val templateValues = this.subjectMap.getTemplateValues(uri)
+			templateValues.nonEmpty && !templateValues.values.exists(_.contains("/"))
 		} else {
-			result = false;
 			val errorMessage = "Can't determine whether " + uri + " is a possible instance of " + this.toString();
 			logger.warn(errorMessage);
+			false
 		}
-		
-		result;
 	}
 	
-	override def getLogicalTableSize() : Long = {
-		this.logicalTable.getLogicalTableSize();
-	}
+	override def getLogicalTableSize() : Long =
+		this.logicalTable.getLogicalTableSize()
 
-	override def getMappedClassURIs() : Iterable[String] = {
+	override def getMappedClassURIs() : Iterable[String] =
 		this.subjectMap.classURIs;
-	}
 
-	override def getTableMetaData() : Option[MorphTableMetaData] = {
-		this.logicalTable.tableMetaData;
-	}
+	override def getTableMetaData() : Option[MorphTableMetaData] =
+		this.logicalTable.tableMetaData
 	
-	def getLogicalTable(): R2RMLLogicalTable = {
-	  this.logicalTable;      
-	}
+	def getLogicalTable(): R2RMLLogicalTable =
+	  this.logicalTable
 
-	override def getSubjectReferencedColumns() : List[String] = {
-	  this.subjectMap.getReferencedColumns();
-	}
+	override def getSubjectReferencedColumns() : List[String] =
+	  this.subjectMap.getReferencedColumns()
 
 }
 
@@ -140,9 +111,7 @@ object R2RMLTriplesMap {
 			throw new Exception(errorMessage);			  
 		}
 			
-		val logicalTableStatementObject = logicalTableStatement.getObject();
-		val logicalTableStatementObjectResource = logicalTableStatementObject.asInstanceOf[Resource];
-		val logicalTable = R2RMLLogicalTable.parse(logicalTableStatementObjectResource);
+		val logicalTable = R2RMLLogicalTable.parse(logicalTableStatement.getObject.asResource)
 //				try {
 //					val conn = pOwner.getConn();
 //					if(conn != null) {
@@ -170,24 +139,14 @@ object R2RMLTriplesMap {
 			logger.error(errorMessage);
 			throw new Exception(errorMessage);
 		}
-		val subjectMap = subjectMaps.iterator.next;
+		val subjectMap = subjectMaps.head
 		
 		//rr:predicateObjectMap SET
-		val predicateObjectMapStatements = tmResource.listProperties(
-		    Constants.R2RML_PREDICATEOBJECTMAP_PROPERTY);
-		val predicateObjectMaps = if(predicateObjectMapStatements != null) {
-			predicateObjectMapStatements.toList().map(predicateObjectMapStatement => {
-				val predicateObjectMapStatementObjectResource =  
-				  predicateObjectMapStatement.getObject().asInstanceOf[Resource];
-				val predicateObjectMap = R2RMLPredicateObjectMap(
-						predicateObjectMapStatementObjectResource); 
-				predicateObjectMap;			  
-			});
-		} else {
-		  Set.empty;
-		};
+		val predicateObjectMaps = tmResource.listProperties(
+		    Constants.R2RML_PREDICATEOBJECTMAP_PROPERTY).map(statement =>
+				R2RMLPredicateObjectMap(statement.getObject.asResource)).toSet
 		
-		val tm = new R2RMLTriplesMap(logicalTable, subjectMap, predicateObjectMaps.toSet);
+		val tm = new R2RMLTriplesMap(logicalTable, subjectMap, predicateObjectMaps)
 		tm.resource = tmResource
 		tm.name = tmResource.getLocalName();
 		tm;

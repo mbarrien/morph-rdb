@@ -1,6 +1,5 @@
 package es.upm.fi.dia.oeg.morph.r2rml.model
 
-import scala.collection.JavaConversions._
 import org.apache.log4j.Logger
 import com.hp.hpl.jena.rdf.model.Resource
 import es.upm.fi.dia.oeg.morph.base.Constants
@@ -12,6 +11,14 @@ class R2RMLObjectMap(termMapType:Constants.MorphTermMapType.Value
   
 	override val logger = Logger.getLogger(this.getClass().getName());
 
+	override def getDefaultTermType() : String = {
+		if(this.termMapType == Constants.MorphTermMapType.ColumnTermMap 
+		    || this.languageTag.isDefined || this.datatype.isDefined ) {
+			Constants.R2RML_LITERAL_URI
+		} else {
+			Constants.R2RML_IRI_URI
+		}
+	}
 }
 
 object R2RMLObjectMap {
@@ -27,9 +34,6 @@ object R2RMLObjectMap {
 		om;	  
 	}
 	
-	def extractObjectMaps(resource:Resource) : Set[R2RMLObjectMap] = {
-	  val tms = R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.obj);
-	  val result = tms.map(tm => tm.asInstanceOf[R2RMLObjectMap]);
-	  result;
-	}
+	def extractObjectMaps(resource:Resource) : Set[R2RMLObjectMap] =
+		R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.obj).map(_.asInstanceOf[R2RMLObjectMap])
 }

@@ -77,19 +77,13 @@ object R2RMLRefObjectMap {
 		val parentTriplesMapStatement = resource.getProperty(
 		    Constants.R2RML_PARENTTRIPLESMAP_PROPERTY);
 		
-		val parentTriplesMap = if(parentTriplesMapStatement != null)  {
-			parentTriplesMapStatement.getObject().asInstanceOf[Resource];
-		} else {
-		  null
-		}
+		val parentTriplesMap = Option(parentTriplesMapStatement).map(_.getObject.asResource).orNull
 		
 		val joinConditionsStatements = resource.listProperties(
 		    Constants.R2RML_JOINCONDITION_PROPERTY);
 		val joinConditions:Set[R2RMLJoinCondition] = if(joinConditionsStatements != null) {
 		  joinConditionsStatements.map(joinConditionStatement => {
-				val joinConditionResource = joinConditionStatement.getObject().asInstanceOf[Resource];
-				val joinCondition = R2RMLJoinCondition(joinConditionResource); 
-				joinCondition
+				R2RMLJoinCondition(joinConditionStatement.getObject.asResource);
 		  }).toSet
 		} else {
 			val errorMessage = "No join conditions defined!";
@@ -102,41 +96,21 @@ object R2RMLRefObjectMap {
 		rom
 	}
 	
-	def isRefObjectMap(resource:Resource ) : Boolean  = {
-		val parentTriplesMapStatement = resource.getProperty(
-		    Constants.R2RML_PARENTTRIPLESMAP_PROPERTY);
-		val hasParentTriplesMap = if(parentTriplesMapStatement != null)  {
-			true;
-		} else {
-		  false
-		}
-		hasParentTriplesMap;
-	}
+	def isRefObjectMap(resource:Resource ) : Boolean =
+		resource.getProperty(Constants.R2RML_PARENTTRIPLESMAP_PROPERTY) != null
 	
 	def extractRefObjectMaps(resource:Resource) : Set[R2RMLRefObjectMap] = {
-		val mappingProperties = List(Constants.R2RML_OBJECTMAP_PROPERTY);
-		val maps = mappingProperties.map(mapProperty => {
-			val mapStatements = resource.listProperties(mapProperty);
-			if(mapStatements != null) {
-				mapStatements.toList().flatMap(mapStatement => {
-					if(mapStatement != null) {
-						val mapStatementObject = mapStatement.getObject();
-						val mapStatementObjectResource = mapStatementObject.asInstanceOf[Resource];
-						if(R2RMLRefObjectMap.isRefObjectMap(mapStatementObjectResource)) {
-							val rom = R2RMLRefObjectMap(mapStatementObjectResource);
-							rom.rdfNode = mapStatementObjectResource;
-							Some(rom);
-						} else {
-							None;
-						}
-					} else {
-					  None
-					}			  
-				});
+		val mapStatements = resource.listProperties(Constants.R2RML_OBJECTMAP_PROPERTY)
+		mapStatements.flatMap(mapStatement => {
+			val mapStatementObject = mapStatement.getObject()
+			val mapStatementObjectResource = mapStatementObject.asResource
+			if(R2RMLRefObjectMap.isRefObjectMap(mapStatementObjectResource)) {
+				val rom = R2RMLRefObjectMap(mapStatementObjectResource)
+				rom.rdfNode = mapStatementObjectResource
+				Some(rom)
 			} else {
-			  Nil
+				None
 			}
-		}).flatten
-		maps.toSet;
+		}).toSet
 	}  
 }

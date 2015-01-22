@@ -46,23 +46,10 @@ class MorphRDBQueryTranslator(nameGenerator:NameGenerator
 
 	override def transIRI(node:Node) : List[ZExp] = {
 		val cms = mapInferredTypes(node);
-		val cm = cms.iterator().next().asInstanceOf[R2RMLTriplesMap];
+		val cm = cms.head.asInstanceOf[R2RMLTriplesMap]
 		val mapColumnsValues = cm.subjectMap.getTemplateValues(node.getURI());
-		val result:List[ZExp] = {
-			if(mapColumnsValues == null || mapColumnsValues.size() == 0) {
-				//do nothing
-			  Nil
-			} else {
-				val resultAux = mapColumnsValues.keySet.map(column => {
-					val value = mapColumnsValues(column);
-					val constant = new ZConstant(value, ZConstant.UNKNOWN);
-					constant;			  
-				})
-				resultAux.toList;
-			}		  
-		}
-
-		result;
+		mapColumnsValues.keySet.map(column =>
+			new ZConstant(mapColumnsValues(column), ZConstant.UNKNOWN)).toList
 	}
 
 //	override def buildAlphaGenerator() = {
@@ -110,8 +97,7 @@ class MorphRDBQueryTranslator(nameGenerator:NameGenerator
 		mapValue;
 	}
 	
-	override def translateResultSet(varName:String , rs:MorphBaseResultSet ) : TermMapResult  = {
-		val result:TermMapResult = {
+	override def translateResultSet(varName:String , rs:MorphBaseResultSet ) : TermMapResult = {
 		try {
 			if(rs != null) {
 				val rsColumnNames = rs.getColumnNames();
@@ -126,15 +112,11 @@ class MorphRDBQueryTranslator(nameGenerator:NameGenerator
 				} else {
 					val termMap : R2RMLTermMap = {
 						mapValue.get match {
-						  case mappedValueTermMap:R2RMLTermMap => {
-						    mappedValueTermMap;
-						  }
-						  case mappedValueRefObjectMap:R2RMLRefObjectMap => {
+						  case mappedValueTermMap:R2RMLTermMap => mappedValueTermMap
+						  case mappedValueRefObjectMap:R2RMLRefObjectMap =>
 //						    val parentTriplesMap = mappedValueRefObjectMap.getParentTriplesMap().asInstanceOf[R2RMLTriplesMap];
-							val md = this.mappingDocument.asInstanceOf[R2RMLMappingDocument];
-							val parentTriplesMap = md.getParentTriplesMap(mappedValueRefObjectMap);						    
-							parentTriplesMap.subjectMap;
-						  }
+							this.mappingDocument.asInstanceOf[R2RMLMappingDocument].getParentTriplesMap(
+								mappedValueRefObjectMap).subjectMap
 						  case _ => {
 						    logger.debug("undefined type of mapping!");
 						    null
@@ -147,7 +129,7 @@ class MorphRDBQueryTranslator(nameGenerator:NameGenerator
 						if(termMap != null) {
 							val termMapType = termMap.termMapType;
 							termMap.termMapType match {
-							  case Constants.MorphTermMapType.TemplateTermMap => {
+								case Constants.MorphTermMapType.TemplateTermMap => {
 									val templateString = termMap.getTemplateString();
 									if(this.mapTemplateMatcher.contains(templateString)) {
 										val matcher = this.mapTemplateMatcher.get(templateString);  
@@ -167,38 +149,24 @@ class MorphRDBQueryTranslator(nameGenerator:NameGenerator
 										}							  
 									}
 		
-									var i = 0;
-									val replaceMentAux = templateAttributes.map(templateAttribute => {
-										val columnName = {
-											if(columnNames == null || columnNames.isEmpty()) {
-												varName;
-											} else {
-												varName + "_" + i;
-											}								  
-										}
-										i = i + 1;
-		
-										val dbValue = rs.getString(columnName);
-										templateAttribute -> dbValue;
-									})
-									val replacements = replaceMentAux.toMap;
+									val replacements = (if (columnNames.isEmpty) {
+										templateAttributes.map(_ -> rs.getString(varName))
+									} else {
+										templateAttributes.zipWithIndex.map({
+											case (templateAttribute, i) => templateAttribute -> rs.getString(varName + "_" + i)
+										})
+									}).toMap
 									
-									val templateResult = if(replacements.size() > 0) {
+									if(replacements.nonEmpty) {
 										RegexUtility.replaceTokens(templateString, replacements);	
 									} else {
 										logger.debug("no replacements found for the R2RML template!");
 										null;
 									}
-									templateResult;
 								} 
-							  case Constants.MorphTermMapType.ColumnTermMap => {
-									//String columnName = termMap.getColumnName();
-									rs.getObject(varName).toString();
-								} 
-							  case Constants.MorphTermMapType.ConstantTermMap => {
-									termMap.getConstantValue();
-								} 
-							  case _ => {
+								case Constants.MorphTermMapType.ColumnTermMap => rs.getObject(varName).toString()
+								case Constants.MorphTermMapType.ConstantTermMap => termMap.getConstantValue()
+								case _ => {
 									logger.debug("Unsupported term map type!");
 									null;
 								}							  
@@ -212,15 +180,11 @@ class MorphRDBQueryTranslator(nameGenerator:NameGenerator
 					val xsdDatatype = termMap.datatype;
 					val resultAuxString = {
 						if(resultAux != null) {
-							if(termMapType != null) {
-								if(termMapType.equals(Constants.R2RML_IRI_URI)) {
-									GeneralUtility.encodeURI(resultAux, properties.mapURIEncodingChars
-									    , properties.uriTransformationOperation);
-								} else if(termMapType.equals(Constants.R2RML_LITERAL_URI)) {
-									GeneralUtility.encodeLiteral(resultAux);
-								} else {
-								  resultAux
-								}
+							if(termMapType.equals(Constants.R2RML_IRI_URI)) {
+								GeneralUtility.encodeURI(resultAux, properties.mapURIEncodingChars
+								    , properties.uriTransformationOperation);
+							} else if(termMapType.equals(Constants.R2RML_LITERAL_URI)) {
+								GeneralUtility.encodeLiteral(resultAux);
 							} else {
 							  resultAux
 							}
@@ -241,9 +205,6 @@ class MorphRDBQueryTranslator(nameGenerator:NameGenerator
 		    null;
 		  }
 		}		  
-		}
-
-		result;
 	}
 
 //	override def transTP(tp:Triple , cm:MorphBaseClassMapping ,predicateURI:String 

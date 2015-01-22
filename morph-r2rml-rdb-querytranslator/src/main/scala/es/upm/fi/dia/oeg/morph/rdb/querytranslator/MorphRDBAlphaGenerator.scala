@@ -43,34 +43,29 @@ extends MorphBaseAlphaGenerator(md,unfolder)
 				val alphaPO = List((null, predicateURI));
 				new MorphAlphaResult(alphaSubject, alphaPO);
 			} else {
-			  val pms = { if (pmsAux == null) {Nil}
-			    else {pmsAux}
-			  }
-					
-			//ALPHA PREDICATE OBJECT
-			val alphaPredicateObjects:List[(SQLJoinTable, String)] = {
-				if(pms.size > 1) {
-					val errorMessage = "Multiple mappings of a predicate is not supported.";
-					logger.error(errorMessage);
-				}
-							
-				val pm = pms.iterator.next().asInstanceOf[R2RMLPredicateObjectMap];
-				val refObjectMap = pm.getRefObjectMap(0);
-				if(refObjectMap != null) { 
-					val alphaPredicateObject = this.calculateAlphaPredicateObject(
-							tp, abstractConceptMapping, pm, logicalTableAlias);
-					List(alphaPredicateObject);
-				} else {
-					Nil;
-				}
+				val pms = if (pmsAux == null) Nil else pmsAux
 
-			  }
-					
-			  new MorphAlphaResult(alphaSubject, alphaPredicateObjects);
+				//ALPHA PREDICATE OBJECT
+				val alphaPredicateObjects:List[(SQLJoinTable, String)] = {
+					if(pms.size > 1) {
+						val errorMessage = "Multiple mappings of a predicate is not supported.";
+						logger.error(errorMessage)
+					}
 
+					val pm = pms.iterator.next().asInstanceOf[R2RMLPredicateObjectMap];
+					val refObjectMap = pm.getRefObjectMap(0);
+					logger.debug("pm = " + pm + "/ refObjectMap = " + refObjectMap)
+					if(refObjectMap != null) {
+						val alphaPredicateObject = this.calculateAlphaPredicateObject(
+								tp, abstractConceptMapping, pm, logicalTableAlias)
+						List(alphaPredicateObject)
+					} else {
+						Nil
+					}
+				}
+				new MorphAlphaResult(alphaSubject, alphaPredicateObjects);
 			}		  
 		}
-
 		alphaResult;
 	} 
 

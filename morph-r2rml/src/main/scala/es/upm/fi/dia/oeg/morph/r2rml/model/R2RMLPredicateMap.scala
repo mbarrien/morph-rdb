@@ -11,7 +11,7 @@ class R2RMLPredicateMap(termMapType:Constants.MorphTermMapType.Value
     extends R2RMLTermMap(termMapType, termType, datatype, languageTag) {
 
 	val inferredTermType = this.inferTermType;
-	if(inferredTermType != null && !inferredTermType.equals(Constants.R2RML_IRI_URI)) {
+	if (!inferredTermType.equals(Constants.R2RML_IRI_URI)) {
 		throw new Exception("Non IRI value is not permitted in the graph!");
 	}  
 }
@@ -29,9 +29,7 @@ object R2RMLPredicateMap {
 		pm;
 	}
 	
-	def extractPredicateMaps(resource:Resource) : Set[R2RMLPredicateMap] = {
-	  val tms = R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.pre);
-	  val result = tms.map(tm => tm.asInstanceOf[R2RMLPredicateMap]);
-	  result;
-	}
+	def extractPredicateMaps(resource:Resource) : Set[R2RMLPredicateMap] =
+		R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.pre).map(
+			_.asInstanceOf[R2RMLPredicateMap])
 }

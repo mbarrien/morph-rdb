@@ -36,18 +36,8 @@ class TriplePatternPredicateBounder(mappingFile : String
 
 	def checkExpandedTriplePatternList(tp : Triple, triplesMapResource : Resource, 
 	    predicateObjectMapResources : List[Resource]) : java.util.Map[Resource, java.util.List[String]] = {
-		val result : Map[Resource, java.util.List[String]] = {
-			if(predicateObjectMapResources.isEmpty) {
-				Map();
-			} else {
-				val pmsHead = predicateObjectMapResources.head;
-				val pmsTail = predicateObjectMapResources.tail;
-				val resultHead = this.checkExpandedTriplePattern(tp, triplesMapResource, pmsHead);
-				val mapResultHead = Map(pmsHead -> resultHead);
-				val mapResultTail = this.checkExpandedTriplePatternList(tp, triplesMapResource, pmsTail);
-				mapResultHead ++ mapResultTail; 
-			}	    
-		}
+		val result : Map[Resource, java.util.List[String]] = predicateObjectMapResources.map(
+			res => (res -> this.checkExpandedTriplePattern(tp, triplesMapResource, res))).toMap
 		result
 	}
 

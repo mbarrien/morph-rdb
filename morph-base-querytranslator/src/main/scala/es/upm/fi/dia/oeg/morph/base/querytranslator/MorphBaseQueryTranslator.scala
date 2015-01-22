@@ -4,84 +4,38 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.LinkedHashSet
 import org.apache.log4j.Logger
 import java.sql.Connection
-import Zql.ZConstant
-import Zql.ZExp
-import Zql.ZExpression
-import Zql.ZGroupBy
-import Zql.ZOrderBy
-import Zql.ZSelectItem
-import Zql.ZUpdate
+import Zql.{ZConstant, ZExp, ZExpression, ZGroupBy, ZOrderBy, ZSelectItem, ZUpdate}
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype
 import com.hp.hpl.jena.graph.Node
 import com.hp.hpl.jena.graph.Triple
-import com.hp.hpl.jena.query.Query
-import com.hp.hpl.jena.query.QueryFactory
-import com.hp.hpl.jena.query.SortCondition
+import com.hp.hpl.jena.query.{Query, QueryFactory, SortCondition}
 import com.hp.hpl.jena.rdf.model.Resource
 import com.hp.hpl.jena.sparql.algebra.Algebra
 import com.hp.hpl.jena.sparql.algebra.Op
-import com.hp.hpl.jena.sparql.algebra.op.OpBGP
-import com.hp.hpl.jena.sparql.algebra.op.OpDistinct
-import com.hp.hpl.jena.sparql.algebra.op.OpExtend
-import com.hp.hpl.jena.sparql.algebra.op.OpFilter
-import com.hp.hpl.jena.sparql.algebra.op.OpGroup
-import com.hp.hpl.jena.sparql.algebra.op.OpJoin
-import com.hp.hpl.jena.sparql.algebra.op.OpLeftJoin
-import com.hp.hpl.jena.sparql.algebra.op.OpOrder
-import com.hp.hpl.jena.sparql.algebra.op.OpProject
-import com.hp.hpl.jena.sparql.algebra.op.OpSlice
-import com.hp.hpl.jena.sparql.algebra.op.OpUnion
+import com.hp.hpl.jena.sparql.algebra.op.{OpBGP, OpDistinct, OpExtend, OpFilter, OpGroup, OpJoin,
+	OpLeftJoin, OpOrder, OpProject, OpSlice, OpUnion}
 import com.hp.hpl.jena.sparql.algebra.optimize.Optimize
-import com.hp.hpl.jena.sparql.core.BasicPattern
-import com.hp.hpl.jena.sparql.core.Var
-import com.hp.hpl.jena.sparql.core.VarExprList
-import com.hp.hpl.jena.sparql.expr.E_Bound
-import com.hp.hpl.jena.sparql.expr.E_Function
-import com.hp.hpl.jena.sparql.expr.E_LogicalAnd
-import com.hp.hpl.jena.sparql.expr.E_LogicalNot
-import com.hp.hpl.jena.sparql.expr.E_LogicalOr
-import com.hp.hpl.jena.sparql.expr.E_NotEquals
-import com.hp.hpl.jena.sparql.expr.E_OneOf
-import com.hp.hpl.jena.sparql.expr.E_Regex
-import com.hp.hpl.jena.sparql.expr.Expr
-import com.hp.hpl.jena.sparql.expr.ExprAggregator
-import com.hp.hpl.jena.sparql.expr.ExprFunction
-import com.hp.hpl.jena.sparql.expr.ExprFunction1
-import com.hp.hpl.jena.sparql.expr.ExprFunction2
-import com.hp.hpl.jena.sparql.expr.ExprList
-import com.hp.hpl.jena.sparql.expr.NodeValue
-import com.hp.hpl.jena.sparql.expr.aggregate.AggAvg
-import com.hp.hpl.jena.sparql.expr.aggregate.AggCount
-import com.hp.hpl.jena.sparql.expr.aggregate.AggMax
-import com.hp.hpl.jena.sparql.expr.aggregate.AggMin
-import com.hp.hpl.jena.sparql.expr.aggregate.AggSum
-import com.hp.hpl.jena.sparql.expr.aggregate.Aggregator
-import com.hp.hpl.jena.vocabulary.RDF
-import com.hp.hpl.jena.vocabulary.XSD
+import com.hp.hpl.jena.sparql.core.{BasicPattern, Var, VarExprList}
+import com.hp.hpl.jena.sparql.expr.{E_Bound, E_Function, E_LogicalAnd, E_LogicalNot, E_LogicalOr,
+	E_NotEquals, E_OneOf, E_Regex, Expr, ExprAggregator, ExprFunction, ExprFunction1, ExprFunction2,
+	ExprList, NodeValue}
+import com.hp.hpl.jena.sparql.expr.aggregate.{AggAvg, AggCount, AggMax, AggMin, AggSum, Aggregator}
+import com.hp.hpl.jena.vocabulary.{RDF, XSD}
 import es.upm.fi.dia.oeg.morph.base.Constants
 import es.upm.fi.dia.oeg.morph.base.SPARQLUtility
 import es.upm.fi.dia.oeg.morph.base.TriplePatternPredicateBounder
-import es.upm.fi.dia.oeg.morph.base.sql.MorphSQLConstant
-import es.upm.fi.dia.oeg.morph.base.sql.MorphSQLSelectItem
+import es.upm.fi.dia.oeg.morph.base.sql.{MorphSQLConstant, MorphSQLSelectItem}
 import es.upm.fi.dia.oeg.morph.base.engine.IQueryTranslator
 import es.upm.fi.dia.oeg.morph.base.DBUtility
 import es.upm.fi.dia.oeg.morph.base.MorphProperties
 import es.upm.fi.dia.oeg.morph.base.sql.MorphSQLUtility
-import es.upm.fi.dia.oeg.morph.base.model.MorphBasePropertyMapping
-import es.upm.fi.dia.oeg.morph.base.model.MorphBaseMappingDocument
-import es.upm.fi.dia.oeg.morph.base.model.MorphBaseClassMapping
-import es.upm.fi.dia.oeg.morph.base.sql.IQuery
-import es.upm.fi.dia.oeg.morph.base.sql.SQLQuery
-import es.upm.fi.dia.oeg.morph.base.sql.SQLFromItem
-import es.upm.fi.dia.oeg.morph.base.sql.SQLJoinTable
-import es.upm.fi.dia.oeg.morph.base.sql.SQLUnion
-import es.upm.fi.dia.oeg.morph.base.engine.MorphBaseUnfolder
-import es.upm.fi.dia.oeg.morph.base.engine.QueryTranslationOptimizer
-import es.upm.fi.dia.oeg.morph.base.querytranslator.engine.MorphQueryRewritterFactory
-import es.upm.fi.dia.oeg.morph.base.querytranslator.engine.MorphQueryTranslatorUtility
-import es.upm.fi.dia.oeg.morph.base.querytranslator.engine.MorphSQLSelectItemGenerator
-import es.upm.fi.dia.oeg.morph.base.querytranslator.engine.MorphMappingInferrer
-import es.upm.fi.dia.oeg.morph.base.querytranslator.engine.MorphQueryRewriter
+import es.upm.fi.dia.oeg.morph.base.model.{MorphBasePropertyMapping, MorphBaseMappingDocument,
+	MorphBaseClassMapping}
+import es.upm.fi.dia.oeg.morph.base.sql.{IQuery, SQLQuery, SQLFromItem, SQLJoinTable, SQLUnion}
+import es.upm.fi.dia.oeg.morph.base.engine.{MorphBaseUnfolder, QueryTranslationOptimizer}
+import es.upm.fi.dia.oeg.morph.base.querytranslator.engine.{MorphQueryRewritterFactory,
+	MorphQueryTranslatorUtility, MorphSQLSelectItemGenerator, MorphMappingInferrer,
+	MorphQueryRewriter}
 import Zql.ZInsert
 
 abstract class MorphBaseQueryTranslator(nameGenerator:NameGenerator

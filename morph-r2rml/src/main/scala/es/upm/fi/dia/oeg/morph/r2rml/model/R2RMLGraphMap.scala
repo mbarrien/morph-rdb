@@ -10,7 +10,7 @@ class R2RMLGraphMap (termMapType:Constants.MorphTermMapType.Value
 extends R2RMLTermMap(termMapType, termType, datatype, languageTag) {
 
 	val inferredTermType = this.inferTermType;
-	if(inferredTermType != null && !inferredTermType.equals(Constants.R2RML_IRI_URI)) {
+	if (!inferredTermType.equals(Constants.R2RML_IRI_URI)) {
 		throw new Exception("Non IRI value is not permitted in the graph!");
 	}
 
@@ -30,10 +30,7 @@ object R2RMLGraphMap {
 		gm;
 	}
 	
-	def extractGraphMaps(resource:Resource) : Set[R2RMLGraphMap]= {
-	  val tms = R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.graph);
-	  val result = tms.map(tm => tm.asInstanceOf[R2RMLGraphMap]);
-	  result;
-	}
-
+	def extractGraphMaps(resource:Resource) : Set[R2RMLGraphMap] =
+		R2RMLTermMap.extractTermMaps(resource, Constants.MorphPOS.graph).map(
+			_.asInstanceOf[R2RMLGraphMap])
 }
